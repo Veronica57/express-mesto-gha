@@ -25,13 +25,16 @@ const likeCard = (req, res) => {
     { $addToSet: { likes: req.user._id } },
     { new: true },
   )
-    .then((card) => res.send({ card }))
-    .catch((error) => {
-      if (error.name === null) {
+    .then((card) => {
+      if (card === null) {
         return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });
-      } if (error.name === 'CastError') {
+      }
+      return res.send({ card });
+    })
+    .catch((error) => {
+      if (error.name === 'CastError') {
         return res.status(CODE_STATUSES.badRequest).send({
           message: 'Incorrect data',
         });
@@ -48,13 +51,16 @@ const dislikeCard = (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true },
   )
-    .then((card) => res.send({ card }))
-    .catch((error) => {
-      if (error.name === null) {
+    .then((card) => {
+      if (card === null) {
         return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });
-      } if (error.name === 'CastError') {
+      }
+      return res.send({ card });
+    })
+    .catch((error) => {
+      if (error.name === 'CastError') {
         return res.status(CODE_STATUSES.badRequest).send({
           message: 'Incorrect data',
         });
