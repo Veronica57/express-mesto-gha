@@ -21,7 +21,7 @@ const getUser = (req, res) => {
   User.findById(req.params.id)
     .then((user) => res.send({ user }))
     .catch((error) => {
-      if (error.name === 'NotFound') {
+      if (error.name === null) {
         return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });

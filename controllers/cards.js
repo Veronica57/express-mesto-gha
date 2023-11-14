@@ -27,7 +27,7 @@ const likeCard = (req, res) => {
   )
     .then((card) => res.send({ card }))
     .catch((error) => {
-      if (error.name === 'NotFound') {
+      if (error.name === null) {
         return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });
@@ -50,7 +50,7 @@ const dislikeCard = (req, res) => {
   )
     .then((card) => res.send({ card }))
     .catch((error) => {
-      if (error.name === 'NotFound') {
+      if (error.name === null) {
         return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });
@@ -69,7 +69,7 @@ const deleteCardById = (req, res) => {
   Card.findByIdAndDelete(req.params.cardId)
     .then((card) => res.send({ card }))
     .catch((error) => {
-      if (error.name === 'NotFound') {
+      if (error.name === null) {
         return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });
