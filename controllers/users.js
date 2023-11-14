@@ -19,13 +19,15 @@ const createUser = (req, res) => {
 
 const getUser = (req, res) => {
   User.findById(req.params.id)
-    .then((user) => res.send({ user }))
-    .catch((error) => {
-      if (error.name === null) {
-        return res.status(CODE_STATUSES.badRequest).send({
+    .then((user) => {
+      if (user === null) {
+        return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });
       }
+      return res.send({ user });
+    })
+    .catch((error) => {
       if (error.name === 'CastError') {
         return res.status(CODE_STATUSES.badRequest).send({
           message: 'User not found',
