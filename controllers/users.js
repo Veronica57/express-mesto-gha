@@ -18,14 +18,23 @@ const createUser = (req, res) => {
 };
 
 const getUser = (req, res) => {
-  User.findById(req.params.id)
-    .then((user) => res.send({ user }))
-    .catch((error) => {
-      if (error.name === null) {
+  const { userId } = req.params;
+  User.findById(userId)
+    .then((user) => {
+      if (!user) {
         return res.status(CODE_STATUSES.notFound).send({
           message: 'Invalid ID',
         });
-      } if (error.name === 'CastError') {
+      }
+      return res.status(200).send({ data: user.toObject() });
+    })
+    .catch((error) => {
+      // if (error.name === null) {
+      //   return res.status(CODE_STATUSES.notFound).send({
+      //     message: 'Invalid ID',
+      //   });
+      // }
+      if (error.name === 'CastError') {
         return res.status(CODE_STATUSES.badRequest).send({
           message: 'User not found',
         });
