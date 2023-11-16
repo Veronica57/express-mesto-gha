@@ -1,98 +1,97 @@
 const Card = require('../models/card');
-const CODE_STATUSES = require('../utils/constants');
+const NotFoundError = require('../errors/notfound');
+const BadRequestError = require('../errors/badrequest');
+const ForbiddenError = require('../errors/forbidden');
 
-const createCard = (req, res) => {
+const createCard = (req, res, next) => {
   const { name, link } = req.body;
   Card.create({ name, link, owner: req.user._id })
-    .then((card) => res.status(CODE_STATUSES.created).send(card))
-    .catch((error) => {
-      if (error.name === 'ValidationError') {
-        return res.status(CODE_STATUSES.badRequest).send({ message: 'Incorrect data' });
+    .then((card) => res.send(card))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new BadRequestError('Incorrect data'));
+      } else {
+        next(err);
       }
-      return res.status(CODE_STATUSES.internalServerError).send({ message: 'Server Error' });
     });
 };
 
-const getCards = (req, res) => {
+const getCards = (req, res, next) => {
   Card.find({})
-    .then((cards) => res.send({ cards }))
-    .catch(() => res.status(CODE_STATUSES.internalServerError).send({ message: 'Server Error' }));
+    .then((cards) => {
+      res.send(cards);
+    })
+    .catch(next);
 };
 
-const likeCard = (req, res) => {
+const likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $addToSet: { likes: req.user._id } },
     { new: true },
   )
-    .then((card) => {
-      if (card === null) {
-        return res.status(CODE_STATUSES.notFound).send({
-          message: 'Invalid ID',
-        });
-      }
-      return res.send({ card });
+    .orFail(() => {
+      throw new NotFoundError('Invalid ID');
     })
-    .catch((error) => {
-      if (error.name === 'CastError') {
-        return res.status(CODE_STATUSES.badRequest).send({
-          message: 'Incorrect data',
-        });
+    .then((card) => {
+      res.send(card);
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError('Incorrect data'));
+      } else {
+        next(err);
       }
-      return res.status(CODE_STATUSES.internalServerErrorCODE_STATUSES).send({
-        message: 'Server Error',
-      });
     });
 };
 
-const dislikeCard = (req, res) => {
+const dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } },
     { new: true },
   )
-    .then((card) => {
-      if (card === null) {
-        return res.status(CODE_STATUSES.notFound).send({
-          message: 'Invalid ID',
-        });
-      }
-      return res.send({ card });
+    .orFail(() => {
+      throw new NotFoundError('Invalid ID');
     })
-    .catch((error) => {
-      if (error.name === 'CastError') {
-        return res.status(CODE_STATUSES.badRequest).send({
-          message: 'Incorrect data',
-        });
+    .then((card) => {
+      res.send(card);
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError('Invalid ID'));
+      } else {
+        next(err);
       }
-      return res.status(CODE_STATUSES.internalServerError).send({
-        message: 'Server Error',
-      });
     });
 };
 
-const deleteCardById = (req, res) => {
-  Card.findByIdAndDelete(req.params.cardId)
-    .then((card) => {
-      if (card === null) {
-        return res.status(CODE_STATUSES.notFound).send({
-          message: 'Invalid ID',
-        });
-      }
-      return res.send({ card });
+const deleteCardById = (req, res, next) => {
+  Card.findById(req.params.cardId)
+    .orFail(() => {
+      throw new NotFoundError('Card Not Found');
     })
-    .catch((error) => {
-      if (error.name === 'CastError') {
-        return res.status(CODE_STATUSES.badRequest).send({
-          message: 'Incorrect data',
-        });
+    .then((card) => {
+      const owner = card.owner.toString();
+      if (req.user._id === owner) {
+        Card.deleteOne(card)
+          .then(() => {
+            res.send(card);
+          })
+          .catch(next);
+      } else {
+        throw new ForbiddenError('Impossible to delete');
       }
-      return res.status(CODE_STATUSES.internalServerError).send({
-        message: 'Server Error',
-      });
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError('Incorrect data'));
+      } else {
+        next(err);
+      }
     });
 };
 
 module.exports = {
-  createCard, getCards, likeCard, dislikeCard, deleteCardById,
+  createCard, getCards, deleteCardById, likeCard, dislikeCard,
 };

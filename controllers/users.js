@@ -1,45 +1,98 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const CODE_STATUSES = require('../utils/constants');
+const NotFoundError = require('../errors/notfound');
+const BadRequestError = require('../errors/badrequest');
+const ConflictError = require('../errors/conflict');
 
-const createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  User.create({ name, about, avatar })
-    .then((user) => res.status(CODE_STATUSES.created).send({ user }))
-    .catch((error) => {
-      if (error.name === 'ValidationError') {
-        return res.status(CODE_STATUSES.badRequest).send({
-          message: 'Incorrect data',
-        });
+const { NODE_ENV, JWT_SECRET = 'secret-key' } = process.env;
+const SALT_ROUND = 10;
+
+const createUser = (req, res, next) => {
+  bcrypt.hash(req.body.password, SALT_ROUND)
+    .then((hash) => User.create({
+      email: req.body.email,
+      password: hash,
+      name: req.body.name,
+      about: req.body.about,
+      avatar: req.body.avatar,
+    }))
+    .then((user) => res.status(201).send({
+      email: user.email,
+      name: user.name,
+      about: user.about,
+      avatar: user.avatar,
+      _id: user._id,
+    }))
+    .catch((err) => {
+      if (err.code === 11000) {
+        next(new ConflictError('User already exists'));
+      } else if (err.name === 'ValidationError') {
+        next(new BadRequestError('Incorrect data'));
+      } else {
+        next(err);
       }
-      return res.status(CODE_STATUSES.internalServerError).send({
-        message: 'Server Error',
-      });
     });
 };
 
-const getUser = (req, res) => {
-  User.findById(req.params.id)
+const login = (req, res, next) => {
+  const { email, password } = req.body;
+  return User.findUserByCredentials(email, password)
     .then((user) => {
-      if (user === null) {
-        return res.status(CODE_STATUSES.notFound).send({
-          message: 'Invalid ID',
-        });
-      }
-      return res.send({ user });
+      const token = jwt.sign(
+        { _id: user._id },
+        NODE_ENV === 'production' ? JWT_SECRET : 'some-secret-key',
+        { expiresIn: '7d' },
+      );
+      res.send({ token });
     })
-    .catch((error) => {
-      if (error.name === 'CastError') {
-        return res.status(CODE_STATUSES.badRequest).send({
-          message: 'User not found',
-        });
+    .catch(next);
+};
+
+const getUser = (req, res, next) => {
+  User.findById(req.params.id)
+    .orFail(() => {
+      throw new NotFoundError('User Not Found');
+    })
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError('User Not Found'));
+      } else {
+        next(err);
       }
-      return res.status(CODE_STATUSES.internalServerError).send({
-        message: 'Server Error',
-      });
+    });
+};//
+
+const getUsers = (req, res, next) => {
+  User.find({})
+    .then((users) => {
+      res.send(users);
+    })
+    .catch(next);
+};
+
+const currentUser = (req, res, next) => {
+  const userId = req.user._id;
+  User.findById(userId)
+    .orFail(() => {
+      throw new NotFoundError('User Not Found');
+    })
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError('Incorrect data'));
+      } else {
+        next(err);
+      }
     });
 };
 
-const updateUser = (req, res) => {
+const updateUser = (req, res, next) => {
   const { name, about } = req.body;
   User.findByIdAndUpdate(
     req.user._id,
@@ -47,62 +100,46 @@ const updateUser = (req, res) => {
     {
       new: true,
       runValidators: true,
-      upsert: false,
     },
   )
-    .then((user) => res.send({ user }))
-    .catch((error) => {
-      if (error.name === 'NotFound') {
-        return res.status(CODE_STATUSES.notFound).send({
-          message: 'Invalid ID',
-        });
-      } if (error.name === 'ValidationError') {
-        return res.status(CODE_STATUSES.badRequest).send({
-          message: 'Incorrect data',
-        });
+    .orFail(() => {
+      throw new NotFoundError('User Not Found');
+    })
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new BadRequestError('Incorrect data'));
+      } else {
+        next(err);
       }
-      return res.status(CODE_STATUSES.internalServerError).send({
-        message: 'Server Error',
-      });
     });
 };
 
-const getUsers = (req, res) => {
-  User.find({})
-    .then((users) => res.send({ users }))
-    .catch(() => res.status(CODE_STATUSES.internalServerError).send({
-      message: 'Server Error',
-    }));
-};
-
-const updateAvatar = (req, res) => {
+const updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
-  return User.findByIdAndUpdate(
+  User.findByIdAndUpdate(
     req.user._id,
     { avatar },
     {
       new: true,
       runValidators: true,
-      upsert: false,
     },
   )
-    .then((user) => res.send({ user }))
-    .catch((error) => {
-      if (error.name === 'NotFound') {
-        return res.status(CODE_STATUSES.notFound).send({
-          message: 'Invalid ID',
-        });
-      } if (error.name === 'ValidationError') {
-        return res.status(CODE_STATUSES.badRequest).send({
-          message: 'Incorrect data',
-        });
+    .orFail(() => {
+      throw new NotFoundError('Invalid ID');
+    })
+    .then((user) => res.status(200).send(user))
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        next(new BadRequestError('Incorrect data'));
+      } else {
+        next(err);
       }
-      return res.status(CODE_STATUSES.internalServerError).send({
-        message: 'Server Error',
-      });
     });
 };
 
 module.exports = {
-  createUser, getUser, updateUser, getUsers, updateAvatar,
+  createUser, getUser, getUsers, currentUser, updateUser, updateAvatar, login,
 };
