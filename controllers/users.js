@@ -4,6 +4,7 @@ const User = require('../models/user');
 const NotFoundError = require('../errors/notfound');
 const BadRequestError = require('../errors/badrequest');
 const ConflictError = require('../errors/conflict');
+const UnauthorizedError = require('../errors/unauthorized');
 
 const JWT_SECRET = 'secret-key';
 const SALT_ROUND = 10;
@@ -26,12 +27,11 @@ const createUser = (req, res, next) => {
     }))
     .catch((err) => {
       if (err.code === 11000) {
-        next(new ConflictError('User already exists'));
-      } else if (err.name === 'ValidationError') {
-        next(new BadRequestError('Incorrect data'));
-      } else {
-        next(err);
+        return next(new ConflictError('User already exists'));
+      } if (err.name === 'ValidationError') {
+        return next(new BadRequestError('Incorrect data'));
       }
+      return next(err);
     });
 };
 
@@ -46,16 +46,19 @@ const login = (req, res, next) => {
       );
       res.send({ token });
     })
-    .catch(next);
+    .catch(() => {
+      next(new UnauthorizedError('Неправильный email или пароль'));
+    });
 };
 
 const getUser = (req, res, next) => {
-  User.findById(req.params.id)
-    .orFail(() => {
-      throw new NotFoundError('User Not Found');
-    })
+  const { userId } = req.params;
+  User.findById(userId)
     .then((user) => {
-      res.send(user);
+      if (!user) {
+        throw new NotFoundError('User Not Found');
+      }
+      return res.status(200).send({ data: user.toObject() });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -77,11 +80,8 @@ const getUsers = (req, res, next) => {
 const currentUser = (req, res, next) => {
   const userId = req.user._id;
   User.findById(userId)
-    .orFail(() => {
-      throw new NotFoundError('User Not Found');
-    })
     .then((user) => {
-      res.send(user);
+      res.status(200).send({ data: user });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -102,11 +102,11 @@ const updateUser = (req, res, next) => {
       runValidators: true,
     },
   )
-    .orFail(() => {
-      throw new NotFoundError('User Not Found');
-    })
     .then((user) => {
-      res.send(user);
+      if (!user) {
+        throw new NotFoundError('User Not Found');
+      }
+      return res.status(200).send({ name: user.name, about: user.about });
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
@@ -127,10 +127,12 @@ const updateAvatar = (req, res, next) => {
       runValidators: true,
     },
   )
-    .orFail(() => {
-      throw new NotFoundError('Invalid ID');
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError('Invalid ID');
+      }
+      return res.status(200).send({ avatar: user.avatar });
     })
-    .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.name === 'ValidationError') {
         next(new BadRequestError('Incorrect data'));
