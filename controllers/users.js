@@ -9,6 +9,7 @@ const UnauthorizedError = require('../errors/unauthorized');
 const JWT_SECRET = 'secret-key';
 const SALT_ROUND = 10;
 
+// create user
 const createUser = (req, res, next) => {
   bcrypt.hash(req.body.password, SALT_ROUND)
     .then((hash) => User.create({
@@ -35,6 +36,7 @@ const createUser = (req, res, next) => {
     });
 };
 
+// user login
 const login = (req, res, next) => {
   const { email, password } = req.body;
   return User.findUserByCredentials(email, password)
@@ -51,6 +53,7 @@ const login = (req, res, next) => {
     });
 };
 
+// get user by ID
 const getUser = (req, res, next) => {
   const { userId } = req.params;
   User.findById(userId)
@@ -69,29 +72,33 @@ const getUser = (req, res, next) => {
     });
 };
 
+// get all users
 const getUsers = (req, res, next) => {
   User.find({})
     .then((users) => {
-      res.send(users);
+      res.status(200).send({ data: users });
     })
     .catch(next);
 };
 
+// current user
 const currentUser = (req, res, next) => {
   const userId = req.user._id;
   User.findById(userId)
     .then((user) => {
       res.status(200).send({ data: user });
     })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        next(new BadRequestError('Incorrect data'));
-      } else {
-        next(err);
-      }
-    });
+    .catch(next);
+  //   (err) => {
+  //   if (err.name === 'CastError') {
+  //     next(new BadRequestError('Incorrect data'));
+  //   } else {
+  //     next(err);
+  //   }
+  // });
 };
 
+// update user
 const updateUser = (req, res, next) => {
   const { name, about } = req.body;
   User.findByIdAndUpdate(
@@ -117,6 +124,7 @@ const updateUser = (req, res, next) => {
     });
 };
 
+// update avatar
 const updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
   User.findByIdAndUpdate(
