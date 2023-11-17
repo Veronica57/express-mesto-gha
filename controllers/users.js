@@ -64,21 +64,6 @@ const login = (req, res, next) => {
 
 // get user by ID
 const getUser = (req, res, next) => {
-  // User.findById(req.params.id)
-  //   .orFail(() => {
-  //     throw new NotFoundError('User Not Found');
-  //   })
-  //   .then((user) => {
-  //     res.send(user);
-  //   })
-  //   .catch((err) => {
-  //     if (err.name === 'CastError') {
-  //       next(new BadRequestError('User Not Found'));
-  //     } else {
-  //       next(err);
-  //     }
-  //   });
-
   const { userId } = req.params;
   User.findById(userId)
     .then((user) => {
@@ -98,22 +83,6 @@ const getUser = (req, res, next) => {
 
 // current user
 const currentUser = (req, res, next) => {
-  // const userId = req.user._id;
-  // User.findById(userId)
-  //   .orFail(() => {
-  //     throw new NotFoundError('User Not Found');
-  //   })
-  //   .then((user) => {
-  //     res.send(user);
-  //   })
-  //   .catch((err) => {
-  //     if (err.name === 'CastError') {
-  //       next(new BadRequestError('User Not Found'));
-  //     } else {
-  //       next(err);
-  //     }
-  //   });
-
   const userId = req.user._id;
   User.findById(userId)
     .then((user) => res.status(200).send({ data: user }))
