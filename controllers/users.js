@@ -59,7 +59,7 @@ const getUser = (req, res, next) => {
   User.findById(userId)
     .then((user) => {
       if (!user) {
-        throw new NotFoundError('User Not Found');
+        throw new BadRequestError('User Not Found');
       }
       return res.status(200).send({ data: user.toObject() });
     })
