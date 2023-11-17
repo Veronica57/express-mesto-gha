@@ -6,7 +6,7 @@ const { validationUpdateUser, validationUpdateAvatar, validationUserId } = requi
 
 userRouter.get('/', getUsers); // users array
 userRouter.get('/me', currentUser); // current user
-userRouter.get('/:id', validationUserId, getUser); // get user by ID
+userRouter.get('/:userId', validationUserId, getUser); // get user by ID
 userRouter.patch('/me', validationUpdateUser, updateUser); // update user
 userRouter.patch('/me/avatar', validationUpdateAvatar, updateAvatar); // update user avatar
 
