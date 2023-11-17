@@ -55,13 +55,12 @@ const login = (req, res, next) => {
 
 // get user by ID
 const getUser = (req, res, next) => {
-  const { userId } = req.params;
-  User.findById(userId)
+  User.findById(req.params.id)
+    .orFail(() => {
+      throw new NotFoundError('User Not Found');
+    })
     .then((user) => {
-      if (!user) {
-        throw new NotFoundError('User Not Found');
-      }
-      return res.status(200).send({ data: user.toObject() });
+      res.send(user);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -70,6 +69,22 @@ const getUser = (req, res, next) => {
         next(err);
       }
     });
+
+  // const { userId } = req.params;
+  // User.findById(userId)
+  //   .then((user) => {
+  //     if (!user) {
+  //       throw new NotFoundError('User Not Found');
+  //     }
+  //     return res.status(200).send({ data: user.toObject() });
+  //   })
+  //   .catch((err) => {
+  //     if (err.name === 'CastError') {
+  //       next(new BadRequestError('User Not Found'));
+  //     } else {
+  //       next(err);
+  //     }
+  //   });
 };
 
 // get all users
@@ -85,11 +100,11 @@ const getUsers = (req, res, next) => {
 const currentUser = (req, res, next) => {
   const userId = req.user._id;
   User.findById(userId)
+    .orFail(() => {
+      throw new NotFoundError('User Not Found');
+    })
     .then((user) => {
-      if (!user) {
-        throw new NotFoundError('User Not Found');
-      }
-      return res.status(200).send({ data: user.toObject() });
+      res.send(user);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -98,6 +113,22 @@ const currentUser = (req, res, next) => {
         next(err);
       }
     });
+
+  // const userId = req.user._id;
+  // User.findById(userId)
+  //   .then((user) => {
+  //     if (!user) {
+  //       throw new NotFoundError('User Not Found');
+  //     }
+  //     return res.status(200).send({ data: user.toObject() });
+  //   })
+  //   .catch((err) => {
+  //     if (err.name === 'CastError') {
+  //       next(new BadRequestError('User Not Found'));
+  //     } else {
+  //       next(err);
+  //     }
+  //   });
 };
 
 // update user
