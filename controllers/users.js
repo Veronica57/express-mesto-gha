@@ -66,6 +66,8 @@ const getUser = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new BadRequestError('User Not Found'));
+      } else if (err.name === 'NotFoundError') {
+        next(new NotFoundError('User Not Found'));
       } else {
         next(err);
       }
@@ -88,14 +90,15 @@ const currentUser = (req, res, next) => {
     .then((user) => {
       res.status(200).send({ data: user });
     })
-    .catch(next);
-  //   (err) => {
-  //   if (err.name === 'CastError') {
-  //     next(new BadRequestError('Incorrect data'));
-  //   } else {
-  //     next(err);
-  //   }
-  // });
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError('User Not Found'));
+      } else if (err.name === 'NotFoundError') {
+        next(new NotFoundError('User Not Found'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 // update user
