@@ -59,15 +59,13 @@ const getUser = (req, res, next) => {
   User.findById(userId)
     .then((user) => {
       if (!user) {
-        throw new BadRequestError('User Not Found');
+        throw new NotFoundError('User Not Found');
       }
       return res.status(200).send({ data: user.toObject() });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new BadRequestError('User Not Found'));
-      } else if (err.name === 'NotFoundError') {
-        next(new NotFoundError('User Not Found'));
       } else {
         next(err);
       }
@@ -88,13 +86,14 @@ const currentUser = (req, res, next) => {
   const userId = req.user._id;
   User.findById(userId)
     .then((user) => {
-      res.status(200).send({ data: user });
+      if (!user) {
+        throw new NotFoundError('User Not Found');
+      }
+      return res.status(200).send({ data: user.toObject() });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new BadRequestError('User Not Found'));
-      } else if (err.name === 'NotFoundError') {
-        next(new NotFoundError('User Not Found'));
       } else {
         next(err);
       }
