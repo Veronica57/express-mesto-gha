@@ -9,6 +9,15 @@ const UnauthorizedError = require('../errors/unauthorized');
 const JWT_SECRET = 'secret-key';
 const SALT_ROUND = 10;
 
+// get all users
+const getUsers = (req, res, next) => {
+  User.find({})
+    .then((users) => {
+      res.status(200).send({ data: users });
+    })
+    .catch(next);
+};
+
 // create user
 const createUser = (req, res, next) => {
   bcrypt.hash(req.body.password, SALT_ROUND)
@@ -85,15 +94,6 @@ const getUser = (req, res, next) => {
   //       next(err);
   //     }
   //   });
-};
-
-// get all users
-const getUsers = (req, res, next) => {
-  User.find({})
-    .then((users) => {
-      res.status(200).send({ data: users });
-    })
-    .catch(next);
 };
 
 // current user
